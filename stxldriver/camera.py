@@ -24,11 +24,11 @@ class Camera(object):
 
     def _display(self, D):
         width = np.max([len(name) for name in D.keys() if name[0] != '_'])
-        fmt = '{{0:>{1}}} {{2}}'.format(name, width, value)
+        fmt = '{{0:>{0}}} {{1}}'.format(width)
         for name, value in D.items():
             if name[0] == '_':
                 continue
-            print(fmt.format(name=name, value=value))
+            print(fmt.format(name, value))
 
     def _get(self, path, stream=False):
         try:
