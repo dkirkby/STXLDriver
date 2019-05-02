@@ -1,4 +1,5 @@
 import time
+import argparse
 import numpy as np
 
 from camera import Camera
@@ -24,7 +25,7 @@ def calibrate_dark(
             break
     # Loop over cycles.
     for cycle in range(ncycles):
-        print('Starting cycle {cycle + 1} / {ncycles}...')
+        print('Starting cycle {0} / {1}...'.format(cycle + 1, ncycles))
         # Loop over exposure times.
         for exptime in exptimes:
             print('   Starting {0:.0f}s exposure...'.format(exptime))
@@ -48,5 +49,11 @@ def calibrate_dark(
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='STXL calibration.')
+    parser.add_argument('-T', '--temperature', type=float, default=15.,
+        help='Temperature setpoint to use in C')
+    parser.add_argument('-n', '--ncycles', type=int, default=5,
+        help='Number of calibration cycles to perform')
+    args = parser.parse_args()
     C = Camera()
-    calibrate_dark(C)
+    calibrate_dark(C, temperature=args.temperature, ncycles=args.ncycles)
