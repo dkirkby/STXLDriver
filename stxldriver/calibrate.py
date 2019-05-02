@@ -42,7 +42,7 @@ def calibrate_dark(
             if state != '3':
                 print('  *** Found unexpected CCD state after exposure: {0}.'.format(state))
             else:
-                fname = f'data/calib_{0:.1f}_{1:.1f}_{2}.fits'.format(temperature, exptime, cycle)
+                fname = 'data/calib_{0:.1f}_{1:.1f}_{2}.fits'.format(temperature, exptime, cycle)
                 print('   Writing {0}...'.format(fname))
             camera.save_exposure(fname)
 
