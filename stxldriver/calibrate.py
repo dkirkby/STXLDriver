@@ -10,16 +10,16 @@ def calibrate_dark(
     """Perform a sequence of dark calibration exposures.
     """
     ttotal = ncycles + np.sum(exptimes) + min_history
-    print(f'Estimated time: {ttotal:.1f}s')
+    print('Estimated time: {0:.1f}s'.format(ttotal))
     # Cool the camera down.
     camera.write_setup(Bin=1, CCDTemperatureSetpoint=temperature, CoolerState=1)
-    print(f'Waiting for cooldown to {temperature:.1f}C...')
+    print('Waiting for cooldown to {0:.1f}C...'.format(temperature))
     history = []
     while True:
         time.sleep(1)
         history.append(float(camera.call_api('ImagerGetSettings.cgi?CCDTemperature')))
         tavg = np.mean(history[-min_history:])
-        print(f'  T={history[-1]:.3f}, Tavg={tavg:.3f}')
+        print('  T={0:.3f}, Tavg={1:.3f}'.format(history[-1], tavg))
         if len(history) >= min_history and np.abs(tavg - temperature) < 0.05:
             break
     # Loop over cycles.
@@ -27,7 +27,7 @@ def calibrate_dark(
         print('Starting cycle {cycle + 1} / {ncycles}...')
         # Loop over exposure times.
         for exptime in exptimes:
-            print(f'   Starting {exptime:.0f}s exposure...')
+            print('   Starting {0:.0f}s exposure...'.format(exptime))
             camera.start_exposure(ExposureTime=exptime, ImageType=0)
             now = time.time()
             end = now + exptime + 5
@@ -35,15 +35,15 @@ def calibrate_dark(
                 time.sleep(1.)
                 Tnow = float(camera.call_api('ImagerGetSettings.cgi?CCDTemperature'))
                 if np.abs(Tnow - temperature) > 0.1:
-                    print(f'  * temperature is not stable (now {Tnow:.3f}C).')
+                    print('  * temperature is not stable (now {0:.3f}C).'.format(Tnow))
                 state = camera.call_api('CurrentCCDState.cgi')
                 if state == '3':
                     break
             if state != '3':
-                print(f'  *** Found unexpected CCD state after exposure: {state}.')
+                print('  *** Found unexpected CCD state after exposure: {0}.'.format(state))
             else:
-                fname = f'data/calib_{temperature:.1f}_{exptime:.1f}_{cycle}.fits'
-                print(f'   Writing {fname}...')
+                fname = f'data/calib_{0:.1f}_{1:.1f}_{2}.fits'.format(temperature, exptime, cycle)
+                print('   Writing {0}...'.format(fname))
             camera.save_exposure(fname)
 
 

@@ -44,7 +44,7 @@ class FormParser(html.parser.HTMLParser):
             # Start parsing a new form.
             name = attrs['name']
             if name in self.forms:
-                raise RuntimeError(f'Found duplicate form with name "{name}".')
+                raise RuntimeError('Found duplicate form with name "{0}".'.format(name))
             self.form = self.forms[name] = collections.OrderedDict()
             self.form_name = name
             return
@@ -52,22 +52,22 @@ class FormParser(html.parser.HTMLParser):
             return
         # Update the current form.
         if self.form is None:
-            raise RuntimeError(f'Found orphan form input with attrs: {attrs}.')
+            raise RuntimeError('Found orphan form input with attrs: {0}.'.format(attrs))
         itype = attrs['type']
         if itype not in ('radio', 'text', 'hidden', 'submit', 'button'):
             raise RuntimeError(
-                f'Found bad input type in "{self.form_name}" with attrs {attrs}.')
+                'Found bad input type in "{0}" with attrs {1}.'.format(self.form_name, attrs))
         name, value = attrs['name'], attrs['value']
         if itype in ('submit', 'button'):
             pass
         elif itype in ('text', 'hidden'):
             if name in self.form:
                 raise RuntimeError(
-                    f'Found duplicate input "{name}" in "{self.form_name}".')
+                    'Found duplicate input "{0}" in "{1}".'.format(name, self.form_name))
             self.form[name] = value
         elif itype == 'radio':            
             # Record all allowed values.
-            values_key = f'_{name}_values'
+            values_key = '_{0}_values'.format(name)
             if values_key not in self.form:
                 self.form[values_key] = [value]
             else:
@@ -76,7 +76,8 @@ class FormParser(html.parser.HTMLParser):
             if 'checked' in attrs:
                 if name in self.form:
                     raise RuntimeError(
-                        f'Found duplicate checked value for "{input}" in "{self.form_name}".')
+                        'Found duplicate checked value for "{0}" in "{1}".'
+                        .format(input, self.form_name))
                 self.form[name] = value
         
     def handle_endtag(self, tag):

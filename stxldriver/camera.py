@@ -24,7 +24,7 @@ class Camera(object):
 
     def _display(self, D):
         width = np.max([len(name) for name in D.keys() if name[0] != '_'])
-        fmt = f'{{name:>{width}}} {{value}}'
+        fmt = '{{0:>{1}}} {{2}}'.format(name, width, value)
         for name, value in D.items():
             if name[0] == '_':
                 continue
@@ -36,7 +36,7 @@ class Camera(object):
             response.raise_for_status()
             return response
         except requests.exceptions.RequestException as e:
-            raise RuntimeError(f'Unable to get "{path}":\n{e}')
+            raise RuntimeError('Unable to get "{0}":\n{1}'.format(path, e))
 
     def read_info(self, verbose=True):
         response = self._get('/index.html')
@@ -61,10 +61,10 @@ class Camera(object):
             {name: value for name, value in defaults.items() if name[0] != '_'})
         for name, value in kwargs.items():
             if name not in params:
-                raise ValueError(f'Invalid name: "{name}".')
+                raise ValueError('Invalid name: "{0}".'.format(name))
             params[name] = str(value)
         # Build a URL query string with all parameters specified.
-        queries = [f'{name}={value}' for name, value in params.items()]
+        queries = ['{0}={1}'.format(name, value) for name, value in params.items()]
         return params, '?' + '&'.join(queries)
 
     def read_setup(self, query='', verbose=True):
@@ -81,7 +81,7 @@ class Camera(object):
         # Check that the read back setup matches what we expect.
         for name, value in new_setup.items():
             if self.setup[name] != value:
-                print(f'WARNING: wrote {name}={value} but read {self.setup[name]}.')
+                print('WARNING: wrote {0}={1} but read {2}.'.format(name, value, self.setup[name]))
                 
     def read_exposure_config(self, query='', verbose=True):
         self.exposure_config = self._read_form('/exposure.html' + query, 'Exposure', verbose)
@@ -109,13 +109,13 @@ class Camera(object):
 
     def call_api(self, method):
         if method not in self.methods:
-            raise ValueError(f'Invalid method: choose one of {",".join(self.methods)}.')
+            raise ValueError('Invalid method: choose one of {0}.'.format(",".join(self.methods)))
         # The random number added here follows the javascript GetDataFromURL in scripts.js
         r = random.random()
-        url = self.URL + f'/api/{method}&{r}'
+        url = self.URL + '/api/{0}&{1}'.format(method, r)
         try:
             response = requests.get(url, timeout=self.timeout)
             response.raise_for_status()
             return response.text.strip()
         except requests.exceptions.RequestException as e:
-            raise RuntimeError(f'Unable to call API method "{method}":\n{e}')
+            raise RuntimeError('Unable to call API method "{0}":\n{1}'.format(method, e))
