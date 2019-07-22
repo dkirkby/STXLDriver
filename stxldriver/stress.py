@@ -45,15 +45,14 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
                 pwr_history.append(float(camera.call_api('ImagerGetSettings.cgi?CoolerPower')))
                 time.sleep(0.5)
                 state = camera.call_api('CurrentCCDState.cgi')
-                logging.info('state', state)
                 # Possible states are:
                 # 0 : Preparing preview
                 # 1 : Waiting
                 # 2 : Exposing
                 # 3 : Reading CCD
-                if state == '3':
+                if state == '1':
                     break
-            if state != '3':
+            if state != '1':
                 logging.warning('Found unexpected CCD state {0} after exposure {1}.'.format(state, nexp + 1))
             else:
                 # Read the data from the camera, always using the same filename.
