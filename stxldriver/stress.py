@@ -45,7 +45,7 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
                 pwr_history.append(float(camera.call_api('ImagerGetSettings.cgi?CoolerPower')))
                 time.sleep(0.5)
                 state = camera.call_api('CurrentCCDState.cgi')
-                print('state', state)
+                logging.info('state', state)
                 # Possible states are:
                 # 0 : Preparing preview
                 # 1 : Waiting
