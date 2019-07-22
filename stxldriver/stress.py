@@ -36,7 +36,7 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
     try:
         while True:
             # Start the next exposure.
-            camera.start_exposure(ExposureTime=exptime, ImageType=0)
+            camera.start_exposure(ExposureTime=exptime, ImageType=0, Contrast=1)
             # Monitor the temperature and cooler power during the exposure.
             cutoff = time.time() + exptime + timeout
             while time.time() < cutoff:
@@ -46,13 +46,11 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
                 time.sleep(0.5)
                 state = camera.call_api('CurrentCCDState.cgi')
                 # Possible states are:
-                # 0 : Preparing preview
-                # 1 : Waiting
+                # 0 : Idle
                 # 2 : Exposing
-                # 3 : Reading CCD
-                if state == '1':
+                if state == '0':
                     break
-            if state != '1':
+            if state != '0':
                 logging.warning('Found unexpected CCD state {0} after exposure {1}.'.format(state, nexp + 1))
             else:
                 # Read the data from the camera, always using the same filename.
