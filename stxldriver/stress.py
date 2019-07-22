@@ -82,4 +82,5 @@ if __name__ == '__main__':
     C = Camera(URL=args.url, verbose=False)
     logging.basicConfig(filename=args.log, level=logging.INFO, format='%(asctime)s %(message)s',
         datefmt='%m/%d/%Y %H:%M:%S')
+    logging.getLogger('requests').setLevel(logging.WARNING)
     stress_test(C, args.exptime, args.binning, args.temperature)
