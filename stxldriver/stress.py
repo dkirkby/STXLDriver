@@ -45,7 +45,7 @@ def stress_test(camera, exptime, binning, temperature, interval=10):
                 if state == '3':
                     break
             if state != '3':
-                print('  *** Found unexpected CCD state {0} after exposure {1}.'.format(state, nexp + 1))
+                logging.warning('Found unexpected CCD state {0} after exposure {1}.'.format(state, nexp + 1))
             else:
                 # Read the data from the camera, always using the same filename.
                 camera.save_exposure('data/tmp.fits')
@@ -62,7 +62,7 @@ def stress_test(camera, exptime, binning, temperature, interval=10):
                 temp_history, pwr_history = [], []
                 start = time.time()
     except KeyboardInterrupt:
-        print('\nbye')
+        logging.info('\nbye')
 
 
 if __name__ == '__main__':
