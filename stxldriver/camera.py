@@ -62,7 +62,7 @@ class Camera(object):
         for name, value in kwargs.items():
             if name not in params:
                 raise ValueError('Invalid name: "{0}".'.format(name))
-            params[name] = str(value)
+            params[name] = value
         # Build a URL query string with all parameters specified.
         queries = ['{0}={1}'.format(name, value) for name, value in params.items()]
         return params, '?' + '&'.join(queries)
@@ -80,8 +80,9 @@ class Camera(object):
         self.read_setup(query, verbose=False)
         # Check that the read back setup matches what we expect.
         for name, value in new_setup.items():
-            if self.setup[name] != value:
-                print('WARNING: wrote {0}={1} but read {2}.'.format(name, value, self.setup[name]))
+            read_value = type(value)(self.setup[name])
+            if read_value != value:
+                print('WARNING: wrote {0}={1} but read {2}.'.format(name, value, read_value))
                 
     def read_exposure_config(self, query='', verbose=True):
         self.exposure_config = self._read_form('/exposure.html' + query, 'Exposure', verbose)
