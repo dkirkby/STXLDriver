@@ -1,2 +1,4 @@
 stxldriver/__pycache__
 data/*.fits
+nohup.out
+*.log
