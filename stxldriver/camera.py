@@ -11,6 +11,8 @@ class Camera(object):
 
     def __init__(self, URL='http://10.0.1.3', verbose=True, timeout=5.):
         self.URL = URL
+        if self.URL.endswith('/'):
+            self.URL = self.URL[:-1]
         self.timeout = timeout
         self.read_info(verbose)
         self.methods = (
