@@ -7,6 +7,9 @@ Can be run in the background using, e.g.
 To monitor progress:
 
   tail -f stress.log
+
+Note that subsequent runs will append to an existing log, so delete it
+first when you want to start a new log.
 """
 import time
 import argparse
@@ -18,7 +21,7 @@ import numpy as np
 from camera import Camera
 
 
-def stress_test(camera, exptime, binning, temperature, interval=10):
+def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
 
     # Initialize the camera
     logging.info('Initializing for {0}x{0} binning at {1}C...'.format(binning, temperature))
@@ -35,7 +38,7 @@ def stress_test(camera, exptime, binning, temperature, interval=10):
             # Start the next exposure.
             camera.start_exposure(ExposureTime=exptime, ImageType=0)
             # Monitor the temperature and cooler power during the exposure.
-            cutoff = time.time() + exptime + 5
+            cutoff = time.time() + exptime + timeout
             while time.time() < cutoff:
                 # Read the current values.
                 temp_history.append(float(camera.call_api('ImagerGetSettings.cgi?CCDTemperature')))
@@ -77,10 +80,14 @@ if __name__ == '__main__':
         help='Temperature setpoint to use in C')
     parser.add_argument('--log', default='stress.log',
         help='Name of log file to write')
+    parser.add_argument('--ival', type=int, default=10,
+        help='Logging interval in units of exposures')
+    parser.add_argument('--timeout', type=float, default=10,
+        help='Maximum time allowed for camera readout in seconds')
     args = parser.parse_args()
 
     C = Camera(URL=args.url, verbose=False)
     logging.basicConfig(filename=args.log, level=logging.INFO, format='%(asctime)s %(message)s',
         datefmt='%m/%d/%Y %H:%M:%S')
     logging.getLogger('requests').setLevel(logging.WARNING)
-    stress_test(C, args.exptime, args.binning, args.temperature)
+    stress_test(C, args.exptime, args.binning, args.temperature, args.ival, args.timeout)
