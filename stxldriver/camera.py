@@ -95,7 +95,14 @@ class Camera(object):
         # Save the current time formatted as a UTC ISO string.
         # Round to ms precision since the javascript code does this (but does it matter?)
         now = datetime.datetime.now()
-        truncated = now.replace(microsecond = round(now.microsecond, -3)).isoformat()
+        micros = round(now.microsecond, -3)
+        if micros < 0:
+            print('Got micros < 0:', micros)
+            micros = 0
+        if micros > 999000:
+            print('Got micros > 999000:', micros)
+            micros = 999000
+        truncated = now.replace(microsecond = micros).isoformat()
         assert truncated[-3:] == '000'
         kwargs['DateTime'] = truncated[:-3]
         # Prepare the exposure parameters to use.
