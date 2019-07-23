@@ -25,7 +25,7 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
 
     # Initialize the camera
     logging.info('Initializing for {0}x{0} binning at {1}C...'.format(binning, temperature))
-    camera.write_setup(Bin=binning, CCDTemperatureSetpoint=temperature, CoolerState=1)
+    camera.write_setup(Bin=binning, CCDTemperatureSetpoint=temperature, CoolerState=1, Fan=2, FanSetpoint=50)
     time.sleep(10)
 
     # Run until we get at SIGINT
