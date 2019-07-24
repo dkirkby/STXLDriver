@@ -134,6 +134,9 @@ class Camera(object):
             for chunk in response.iter_content(chunk_size=128):
                 fout.write(chunk)
 
+    def abort_exposure(self):
+        self._get('/exposure.html?Abort')
+
     def call_api(self, method):
         if method not in self.methods:
             raise ValueError('Invalid method: choose one of {0}.'.format(",".join(self.methods)))
