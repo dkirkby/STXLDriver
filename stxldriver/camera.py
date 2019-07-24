@@ -103,7 +103,8 @@ class Camera(object):
             print('Got micros > 999000:', micros)
             micros = 999000
         truncated = now.replace(microsecond = micros).isoformat()
-        assert truncated[-3:] == '000'
+        if truncated[-3:] != '000':
+            print('DEBUG', now, micros, truncated)
         kwargs['DateTime'] = truncated[:-3]
         # Prepare the exposure parameters to use.
         new_exposure, query = self._build_query(self.exposure_config, kwargs)
