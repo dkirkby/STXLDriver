@@ -43,7 +43,7 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
                 # Read the current values.
                 temp_history.append(float(camera.call_api('ImagerGetSettings.cgi?CCDTemperature')))
                 pwr_history.append(float(camera.call_api('ImagerGetSettings.cgi?CoolerPower')))
-                time.sleep(0.5)
+                time.sleep(1.0)
                 state = camera.call_api('CurrentCCDState.cgi')
                 # Possible states are:
                 # 0 : Idle
