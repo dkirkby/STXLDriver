@@ -4,7 +4,7 @@ import random
 import requests
 import numpy as np
 
-from parse import IndexParser, FormParser
+from .parse import IndexParser, FormParser
 
 
 class Camera(object):
@@ -85,7 +85,7 @@ class Camera(object):
             read_value = type(value)(self.setup[name])
             if read_value != value:
                 print('WARNING: wrote {0}={1} but read {2}.'.format(name, value, read_value))
-                
+
     def read_exposure_config(self, query='', verbose=True):
         self.exposure_config = self._read_form('/exposure.html' + query, 'Exposure', verbose)
 
