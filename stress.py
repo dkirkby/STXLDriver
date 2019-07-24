@@ -76,7 +76,7 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
                 logging.info(msg)
                 # Test for cooling latchup.
                 if np.all(np.array(pwr_history) == 100) and np.min(temp_history) > temperature + 2:
-                    loggging.warning('Detected cooling latchup!')
+                    logging.warning('Detected cooling latchup!')
                     initialize()
                 # Reset statistics
                 last_nexp = nexp
