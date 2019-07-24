@@ -71,6 +71,14 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
                        .format(nexp, deadtime, *np.percentile(temp_history, (0, 50, 100)),
                                *np.percentile(pwr_history, (0, 50, 100))))
                 logging.info(msg)
+                # Test for cooling latchup.
+                if np.all(np.array(pwr_history) == 100) and np.min(temp_history) > temperature + 2:
+                    loggging.warning('Detected cooling latchup, so rebooting now...')
+                    camera.reboot()
+                    time.sleep(15)
+                    logging.info('Initializing for {0}x{0} binning at {1}C...'.format(binning, temperature))
+                    camera.write_setup(Bin=binning, CCDTemperatureSetpoint=temperature, CoolerState=1, Fan=2, FanSetpoint=50)
+                    time.sleep(15)
                 # Reset statistics
                 last_nexp = nexp
                 temp_history, pwr_history = [], []
