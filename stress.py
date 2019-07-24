@@ -73,7 +73,7 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
                 logging.info(msg)
                 # Test for cooling latchup.
                 if np.all(np.array(pwr_history) == 100) and np.min(temp_history) > temperature + 2:
-                    loggging.warning('Detected cooling latchup, so rebooting now...')
+                    loggging.warning('Detected cooling latchup so rebooting now...')
                     camera.reboot()
                     time.sleep(15)
                     logging.info('Initializing for {0}x{0} binning at {1}C...'.format(binning, temperature))
