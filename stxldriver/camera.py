@@ -22,6 +22,7 @@ class Camera(object):
             'CurrentCCDState.cgi?IncludeTimePct',
             'FilterState.cgi')
         self.setup = None
+        self.network = None
         self.exposure_config = None
 
     def _display(self, D):
@@ -32,9 +33,12 @@ class Camera(object):
                 continue
             print(fmt.format(name, value))
 
-    def _get(self, path, stream=False):
+    def _get(self, path, stream=False, timeout=None):
+        if timeout is None:
+            # Use the default value.
+            timeout = self.timeout
         try:
-            response = requests.get(self.URL + path, timeout=self.timeout, stream=stream)
+            response = requests.get(self.URL + path, timeout=timeout, stream=stream)
             response.raise_for_status()
             return response
         except requests.exceptions.RequestException as e:
@@ -48,8 +52,8 @@ class Camera(object):
         if verbose:
             self._display(self.properties)
 
-    def _read_form(self, path, name, verbose=True):
-        response = self._get(path)
+    def _read_form(self, path, name, verbose=True, timeout=None):
+        response = self._get(path, timeout=timeout)
         parser = FormParser()
         parser.feed(response.text)
         form = parser.forms[name]
@@ -68,6 +72,18 @@ class Camera(object):
         # Build a URL query string with all parameters specified.
         queries = ['{0}={1}'.format(name, value) for name, value in params.items()]
         return params, '?' + '&'.join(queries)
+
+    def reboot(self):
+        if self.network is None:
+            # Read the current network setup if necessary.
+            self.network = self._read_form('/network.html', 'EthernetParams', verbose=False)
+        # Submit the network form with no changes to trigger a reboot.
+        _, query = self._build_query(self.network, {})
+        try:
+            self._read_form('/network.html' + query, 'EthernetParams', timeout=1)
+        except RuntimeError:
+            # This will normally time out because of the reboot.
+            pass
 
     def read_setup(self, query='', verbose=True):
         self.setup = self._read_form('/setup.html' + query, 'CameraSetup', verbose)
