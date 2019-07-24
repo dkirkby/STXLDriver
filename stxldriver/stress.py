@@ -24,6 +24,8 @@ from camera import Camera
 def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
 
     # Initialize the camera
+    # CoolerState: 0=off, 1=on.
+    # Fan: 1=auto, 2=manual, 3=disabled.
     logging.info('Initializing for {0}x{0} binning at {1}C...'.format(binning, temperature))
     camera.write_setup(Bin=binning, CCDTemperatureSetpoint=temperature, CoolerState=1, Fan=2, FanSetpoint=50)
     time.sleep(10)
@@ -36,7 +38,9 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
     try:
         while True:
             # Start the next exposure.
-            camera.start_exposure(ExposureTime=exptime, ImageType=0, Contrast=1)
+            # ImageType: 0=dark, 1=light, 2=bias, 3=flat.
+            # Contrast: 0=auto, 1=manual.
+            camera.start_exposure(ExposureTime=exptime, ImageType=1, Contrast=1)
             # Monitor the temperature and cooler power during the exposure.
             cutoff = time.time() + exptime + timeout
             while time.time() < cutoff:
