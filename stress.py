@@ -21,11 +21,11 @@ import numpy as np
 from stxldriver.camera import Camera
 
 
-def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
+def initialize(camera, binning, temperature):
 
     logging.info('Rebooting...')
     camera.reboot()
-    time.sleep(15)
+    time.sleep(30)
 
     # Initialize the camera
     # CoolerState: 0=off, 1=on.
@@ -34,7 +34,10 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
     camera.write_setup(Bin=binning, CCDTemperatureSetpoint=temperature, CoolerState=1, Fan=2, FanSetpoint=50)
     time.sleep(15)
 
-    # Run until we get at SIGINT
+
+def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
+
+    initialize(camera, binning, temperature)
     logging.info('Running until ^C or kill -SIGINT {0}'.format(os.getpgid(0)))
     nexp, last_nexp = 0, 0
     temp_history, pwr_history = [], []
@@ -73,12 +76,8 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
                 logging.info(msg)
                 # Test for cooling latchup.
                 if np.all(np.array(pwr_history) == 100) and np.min(temp_history) > temperature + 2:
-                    loggging.warning('Detected cooling latchup so rebooting now...')
-                    camera.reboot()
-                    time.sleep(15)
-                    logging.info('Initializing for {0}x{0} binning at {1}C...'.format(binning, temperature))
-                    camera.write_setup(Bin=binning, CCDTemperatureSetpoint=temperature, CoolerState=1, Fan=2, FanSetpoint=50)
-                    time.sleep(15)
+                    loggging.warning('Detected cooling latchup!')
+                    initialize()
                 # Reset statistics
                 last_nexp = nexp
                 temp_history, pwr_history = [], []
