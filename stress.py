@@ -2,7 +2,7 @@
 
 Can be run in the background using, e.g.
 
-  nohup python stxldriver/stress.py --url http://10.0.1.3 --exptime 5 &
+  nohup python stress.py --url http://10.0.1.3 --exptime 5 &
 
 To monitor progress:
 
