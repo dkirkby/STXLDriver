@@ -23,6 +23,10 @@ from camera import Camera
 
 def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
 
+    logging.info('Rebooting...')
+    camera.reboot()
+    time.sleep(5)
+
     # Initialize the camera
     # CoolerState: 0=off, 1=on.
     # Fan: 1=auto, 2=manual, 3=disabled.
