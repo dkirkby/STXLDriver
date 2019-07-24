@@ -18,7 +18,7 @@ import logging
 
 import numpy as np
 
-from camera import Camera
+from stxldriver.camera import Camera
 
 
 def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):

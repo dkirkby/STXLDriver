@@ -2,7 +2,7 @@ import time
 import argparse
 import numpy as np
 
-from camera import Camera
+from stxldriver.camera import Camera
 
 
 def calibrate_dark(
