@@ -9,7 +9,7 @@ from .parse import IndexParser, FormParser
 
 class Camera(object):
 
-    def __init__(self, URL='http://10.0.1.3', verbose=True, timeout=10.):
+    def __init__(self, URL='http://10.0.1.3', verbose=True, timeout=60.):
         self.URL = URL
         if self.URL.endswith('/'):
             self.URL = self.URL[:-1]
