@@ -70,9 +70,10 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
             if nexp % interval == 0:
                 elapsed = time.time() - start
                 deadtime = elapsed / (nexp - last_nexp) - exptime
-                msg = ('nexp={0:05d}: dead {1:.1f}s, T {2:4.1f}/{3:4.1f}/{4:4.1f}C PWR {5:2.0f}/{6:2.0f}/{7:2.0f}%'
+                load = os.getloadavg()[1] # 5-min average number of processes in the system run queue.
+                msg = ('nexp={0:05d}: dead {1:.1f}s, T {2:4.1f}/{3:4.1f}/{4:4.1f}C PWR {5:2.0f}/{6:2.0f}/{7:2.0f}% LOAD {8:.1f}'
                        .format(nexp, deadtime, *np.percentile(temp_history, (0, 50, 100)),
-                               *np.percentile(pwr_history, (0, 50, 100))))
+                               *np.percentile(pwr_history, (0, 50, 100)), load))
                 logging.info(msg)
                 # Test for cooling latchup.
                 if np.all(np.array(pwr_history) == 100) and np.min(temp_history) > temperature + 2:
