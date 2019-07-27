@@ -50,17 +50,21 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
             camera.start_exposure(ExposureTime=exptime, ImageType=1, Contrast=1)
             # Monitor the temperature and cooler power during the exposure.
             cutoff = time.time() + exptime + timeout
+            state = '?'
             while time.time() < cutoff:
-                # Read the current values.
-                temp_history.append(float(camera.call_api('ImagerGetSettings.cgi?CCDTemperature')))
-                pwr_history.append(float(camera.call_api('ImagerGetSettings.cgi?CoolerPower')))
+                # Read the current state, but keep going in case of a network problem.
+                try:
+                    temp_now = float(camera.call_api('ImagerGetSettings.cgi?CCDTemperature'))
+                    pwr_now = float(camera.call_api('ImagerGetSettings.cgi?CoolerPower'))
+                    state = camera.call_api('CurrentCCDState.cgi')
+                    temp_history.append(temp_now)
+                    pwr_history.append(pwr_now)
+                    # State: 0=Idle, 2=Exposing
+                    if state == '0':
+                        break
+                except RuntimeError as e:
+                    logging.warning(e)
                 time.sleep(1.0)
-                state = camera.call_api('CurrentCCDState.cgi')
-                # Possible states are:
-                # 0 : Idle
-                # 2 : Exposing
-                if state == '0':
-                    break
             if state != '0':
                 logging.warning('Found unexpected CCD state {0} after exposure {1}.'.format(state, nexp + 1))
             else:
