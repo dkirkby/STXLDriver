@@ -1,7 +1,10 @@
 import datetime
 import collections
 import random
+import time
+
 import requests
+
 import numpy as np
 
 from .parse import IndexParser, FormParser
@@ -44,8 +47,8 @@ class Camera(object):
         except requests.exceptions.RequestException as e:
             raise RuntimeError('Unable to get "{0}":\n{1}'.format(path, e))
 
-    def read_info(self, verbose=True):
-        response = self._get('/index.html')
+    def read_info(self, verbose=True, timeout=None):
+        response = self._get('/index.html', timeout=timeout)
         parser = IndexParser()
         parser.feed(response.text)
         self.properties = parser.properties
@@ -73,34 +76,52 @@ class Camera(object):
         queries = ['{0}={1}'.format(name, value) for name, value in params.items()]
         return params, '?' + '&'.join(queries)
 
-    def reboot(self):
+    def reboot(self, verbose=True):
         if self.network is None:
             # Read the current network setup if necessary.
             self.network = self._read_form('/network.html', 'EthernetParams', verbose=False)
         # Submit the network form with no changes to trigger a reboot.
         _, query = self._build_query(self.network, {})
         try:
+            # This request will normally time out instead of returning an updated
+            # network page.
             self._read_form('/network.html' + query, 'EthernetParams', timeout=1)
-        except RuntimeError:
-            # This will normally time out because of the reboot.
-            pass
+        except RuntimeError as e:
+            # This is expected. Wait 5s then try to load the info page and reset our state.
+            time.sleep(5)
+            self.read_info(verbose=verbose)
 
     def read_setup(self, query='', verbose=True):
         self.setup = self._read_form('/setup.html' + query, 'CameraSetup', verbose)
 
-    def write_setup(self, **kwargs):
+    def write_setup(self, max_retries=0, verbose=True, **kwargs):
         if self.setup is None:
             # Read the current setup if necessary.
             self.read_setup(verbose=False)
         # Build the new setup to write.
         new_setup, query = self._build_query(self.setup, kwargs)
-        # Write the new setup.
-        self.read_setup(query, verbose=False)
-        # Check that the read back setup matches what we expect.
-        for name, value in new_setup.items():
-            read_value = type(value)(self.setup[name])
-            if read_value != value:
-                print('WARNING: wrote {0}={1} but read {2}.'.format(name, value, read_value))
+        # Loop over attempts to write this setup.
+        attempts = 0
+        while attempts < 1 + max_retries:
+            # Write the new setup.
+            self.read_setup(query, verbose=False)
+            attempts += 1
+            # Check that the read back setup matches what we expect.
+            verified = True
+            for name, value in new_setup.items():
+                read_value = type(value)(self.setup[name])
+                if read_value != value:
+                    verified = False
+                    msg = 'wrote {0}={1} but read {2}.'.format(name, value, read_value)
+                    if verbose:
+                        print(msg)
+            if verified:
+                break
+            # Re-read the current setup before retrying.
+            self.read_setup(verbose=verbose)
+            time.sleep(1)
+        if not verified:
+            raise RuntimeError('Failed to verify setup after {0} retries.'.format(max_retries))
 
     def read_exposure_config(self, query='', verbose=True):
         self.exposure_config = self._read_form('/exposure.html' + query, 'Exposure', verbose)
