@@ -172,11 +172,17 @@ if __name__ == '__main__':
 
     C = Camera(URL=args.url, verbose=False)
     initialize(C, args.binning, args.temperature)
-    for i in range(args.nzero):
+    i = 0
+    while i < args.nzero:
         ok = take_exposure(C, exptime=0., fname='data/zero_{0:03d}.fits'.format(i), shutter_open=False)
-        if not ok:
-            break
-    for i in range(args.ndark):
+        if ok:
+            i += 1
+        else:
+            initialize(C, args.binning, args.temperature)
+    i = 0
+    while i < args.ndark:
         ok = take_exposure(C, exptime=args.tdark, fname='data/dark_{0:03d}.fits'.format(i), shutter_open=False)
-        if not ok:
-            break
+        if ok:
+            i += 1
+        else:
+            initialize(C, args.binning, args.temperature)
