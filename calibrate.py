@@ -2,6 +2,8 @@ import time
 import argparse
 import os.path
 import sys
+import glob
+import re
 
 import numpy as np
 
@@ -114,7 +116,6 @@ def take_exposure(camera, exptime, fname, shutter_open=True, timeout=10, latchup
         raise RuntimeError('Camera has not been initialized.')
     cooling = int(camera.setup['CoolerState']) == 1
     temperature_setpoint = float(camera.setup['CCDTemperatureSetpoint'])
-    print('cooling', cooling, 'Tset', temperature_setpoint)
     # Start the exposure.
     ImageType = 1 if shutter_open else 0
     camera.start_exposure(ExposureTime=float(exptime), ImageType=ImageType, Contrast=1)
@@ -156,6 +157,19 @@ def take_exposure(camera, exptime, fname, shutter_open=True, timeout=10, latchup
     return True
 
 
+def next_index(pattern, verbose=True):
+    found = sorted(glob.glob(pattern.format(N='*')))
+    if found:
+        regexp = re.compile(pattern.format(N='([0-9]+)'))
+        nextidx = int(re.match(regexp, found[-1]).group(1)) + 1
+        if verbose:
+            print('Found {0} files matching "{1}". Next index is {2}.'
+                  .format(len(found), pattern, nextidx))
+        return nextidx
+    else:
+        return 0
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='STXL calibration.')
     parser.add_argument('-v', '--verbose', action='store_true',
@@ -174,6 +188,10 @@ if __name__ == '__main__':
         help='dark exposure length in seconds')
     parser.add_argument('--outpath', type=str, metavar='PATH', default='.',
         help='existing path where output file are written')
+    parser.add_argument('--zero-name', type=str, metavar='NAME', default='zero_{N}.fits',
+        help='format string for zero file names using {N} for sequence number')
+    parser.add_argument('--dark-name', type=str, metavar='NAME', default='dark_{N}.fits',
+        help='format string for dark file names using {N} for sequence number')
     args = parser.parse_args()
 
     outpath = os.path.abspath(args.outpath)
@@ -185,14 +203,16 @@ if __name__ == '__main__':
     init = lambda: initialize(C, args.binning, args.temperature)
     init()
 
-    i = 0
-    while i < args.nzero:
-        fname = os.path.join(outpath, 'zero_{0:03d}.fits'.format(i))
+    i = i0 = next_index(args.zero_name, verbose=args.verbose)
+    fname_format = args.zero_name.format(N='{N:03d}')
+    while i < i0 + args.nzero:
+        fname = os.path.join(outpath, fname_format.format(N=i))
         if take_exposure(C, exptime=0., fname=fname, shutter_open=False, latchup_action=init):
             i += 1
 
-    i = 0
+    i = i0 = next_index(args.dark_name, verbose=args.verbose)
+    fname_format = args.dark_name.format(N='{N:03d}')
     while i < args.ndark:
-        fname = os.path.join(outpath, 'dark_{0:03d}.fits'.format(i))
+        fname = os.path.join(outpath, fname_format.format(N=i))
         if take_exposure(C, exptime=args.tdark, fname=fname, shutter_open=False, latchup_action=init):
             i += 1
