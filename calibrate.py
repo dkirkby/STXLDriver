@@ -214,7 +214,7 @@ if __name__ == '__main__':
     dark_name = os.path.join(outpath, args.dark_name)
     i = i0 = next_index(dark_name, verbose=args.verbose)
     fname_format = dark_name.format(N='{N:03d}')
-    while i < args.ndark:
+    while i < i0 + args.ndark:
         fname = os.path.join(outpath, fname_format.format(N=i))
         if take_exposure(C, exptime=args.tdark, fname=fname, shutter_open=False, latchup_action=init):
             i += 1
