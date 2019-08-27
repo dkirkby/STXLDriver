@@ -200,18 +200,20 @@ if __name__ == '__main__':
         sys.exit(-1)
 
     C = Camera(URL=args.url, verbose=False)
-    init = lambda: initialize(C, args.binning, args.temperature)
+    init = lambda: initialize(C, binning=args.binning, temperature_setpoint=args.temperature)
     init()
 
-    i = i0 = next_index(args.zero_name, verbose=args.verbose)
-    fname_format = args.zero_name.format(N='{N:03d}')
+    zero_name = os.path.join(outpath, args.zero_name)
+    i = i0 = next_index(zero_name, verbose=args.verbose)
+    fname_format = zero_name.format(N='{N:03d}')
     while i < i0 + args.nzero:
         fname = os.path.join(outpath, fname_format.format(N=i))
         if take_exposure(C, exptime=0., fname=fname, shutter_open=False, latchup_action=init):
             i += 1
 
-    i = i0 = next_index(args.dark_name, verbose=args.verbose)
-    fname_format = args.dark_name.format(N='{N:03d}')
+    dark_name = os.path.join(outpath, args.dark_name)
+    i = i0 = next_index(dark_name, verbose=args.verbose)
+    fname_format = dark_name.format(N='{N:03d}')
     while i < args.ndark:
         fname = os.path.join(outpath, fname_format.format(N=i))
         if take_exposure(C, exptime=args.tdark, fname=fname, shutter_open=False, latchup_action=init):
