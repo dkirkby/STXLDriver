@@ -1,5 +1,8 @@
 import time
 import argparse
+import os.path
+import sys
+
 import numpy as np
 
 from stxldriver.camera import Camera
@@ -80,7 +83,7 @@ def initialize(camera, binning=2, reboot=True, fan_setpoint=50, temperature_setp
             break
 
 
-def take_exposure(camera, exptime, fname, shutter_open=True, timeout=10, fail_on_latchup=True):
+def take_exposure(camera, exptime, fname, shutter_open=True, timeout=10, latchup_action=None):
     """Take one exposure.
 
     The camera must be initialized first.
@@ -96,10 +99,10 @@ def take_exposure(camera, exptime, fname, shutter_open=True, timeout=10, fail_on
     timeout : float
         If the camera state has not changed to Idle after exptime + timeout,
         assume there is a problem. Value is in seconds.
-    fail_on_latchup : bool
-        When True, consider an exposure to have failed if a cooling latchup
-        has been detected during the exposure.  Otherwise, read out the
-        data and return normally.
+    latchup_action : callable or None
+        Function to call if a cooling latchup condition is detected or None.
+        When None, a latchup is ignored. Otherwise this function is called
+        and we return False without saving the data.
 
     Returns
     -------
@@ -144,7 +147,8 @@ def take_exposure(camera, exptime, fname, shutter_open=True, timeout=10, fail_on
         return False
     if cooling and np.all(np.array(pwr_history) == 100) and np.min(temp_history) > temperature_setpoint + 2:
         print('Detected cooling latchup!')
-        if fail_on_latchup:
+        if latchup_action is not None:
+            latchup_action()
             return False
     # Read the data from the camera.
     camera.save_exposure(fname)
@@ -168,21 +172,27 @@ if __name__ == '__main__':
         help='number of dark (shutter closed) exposures to take')
     parser.add_argument('--tdark', type=float, default=120, metavar='SECONDS',
         help='dark exposure length in seconds')
+    parser.add_argument('--outpath', type=str, metavar='PATH', default='.',
+        help='existing path where output file are written')
     args = parser.parse_args()
 
+    outpath = os.path.abspath(args.outpath)
+    if not os.path.exists(outpath):
+        print('Non-existant output path: {0}'.format(args.outpath))
+        sys.exit(-1)
+
     C = Camera(URL=args.url, verbose=False)
-    initialize(C, args.binning, args.temperature)
+    init = lambda: initialize(C, args.binning, args.temperature)
+    init()
+
     i = 0
     while i < args.nzero:
-        ok = take_exposure(C, exptime=0., fname='data/zero_{0:03d}.fits'.format(i), shutter_open=False)
-        if ok:
+        fname = os.path.join(outpath, 'zero_{0:03d}.fits'.format(i))
+        if take_exposure(C, exptime=0., fname=fname, shutter_open=False, latchup_action=init)
             i += 1
-        else:
-            initialize(C, args.binning, args.temperature)
+
     i = 0
     while i < args.ndark:
-        ok = take_exposure(C, exptime=args.tdark, fname='data/dark_{0:03d}.fits'.format(i), shutter_open=False)
-        if ok:
+        fname = os.path.join(outpath, 'dark_{0:03d}.fits'.format(i))
+        if take_exposure(C, exptime=args.tdark, fname=fname, shutter_open=False, latchup_action=init)
             i += 1
-        else:
-            initialize(C, args.binning, args.temperature)
