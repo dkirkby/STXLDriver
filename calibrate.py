@@ -56,6 +56,9 @@ def initialize(camera, binning=2, reboot=True, fan_setpoint=50, temperature_setp
             raise ValueError('Invalid fan_setpoint {0}%. Must be 0-100.'.format(fan_setpoint))
         # For some reason, several retries are sometimes necesary to change the fan setup.
         try:
+            # Set 100% then the desired value to provide some audible feedback.
+            camera.write_setup(Fan=2, FanSetpoint=100.0)
+            time.sleep(2)
             camera.write_setup(Fan=2, FanSetpoint=float(fan_setpoint))
         except RuntimeError as e:
             # This sometimes happens but we keep going when it does.
@@ -171,7 +174,9 @@ def next_index(pattern, verbose=True):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='STXL calibration.')
+    parser = argparse.ArgumentParser(
+        description='STXL calibration.',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-v', '--verbose', action='store_true',
         help='be verbose about progress')
     parser.add_argument('--url', default='http://10.0.1.3',
@@ -186,11 +191,17 @@ if __name__ == '__main__':
         help='number of dark (shutter closed) exposures to take')
     parser.add_argument('--tdark', type=float, default=120, metavar='SECONDS',
         help='dark exposure length in seconds')
+    parser.add_argument('--nflat', type=int, default=0, metavar='N',
+        help='number of flat (shutter open) exposures to take')
+    parser.add_argument('--tflat', type=float, default=10, metavar='SECONDS',
+        help='flat exposure length in seconds')
     parser.add_argument('--outpath', type=str, metavar='PATH', default='.',
         help='existing path where output file are written')
     parser.add_argument('--zero-name', type=str, metavar='NAME', default='zero_{N}.fits',
         help='format string for zero file names using {N} for sequence number')
     parser.add_argument('--dark-name', type=str, metavar='NAME', default='dark_{N}.fits',
+        help='format string for dark file names using {N} for sequence number')
+    parser.add_argument('--flat-name', type=str, metavar='NAME', default='flat_{N}.fits',
         help='format string for dark file names using {N} for sequence number')
     args = parser.parse_args()
 
