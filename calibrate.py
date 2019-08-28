@@ -229,3 +229,11 @@ if __name__ == '__main__':
         fname = os.path.join(outpath, fname_format.format(N=i))
         if take_exposure(C, exptime=args.tdark, fname=fname, shutter_open=False, latchup_action=init):
             i += 1
+
+    flat_name = os.path.join(outpath, args.flat_name)
+    i = i0 = next_index(flat_name, verbose=args.verbose)
+    fname_format = flat_name.format(N='{N:03d}')
+    while i < i0 + args.nflat:
+        fname = os.path.join(outpath, fname_format.format(N=i))
+        if take_exposure(C, exptime=args.tflat, fname=fname, shutter_open=True, latchup_action=init):
+            i += 1
