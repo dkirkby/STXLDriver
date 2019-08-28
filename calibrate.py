@@ -193,7 +193,7 @@ if __name__ == '__main__':
         help='dark exposure length in seconds')
     parser.add_argument('--nflat', type=int, default=0, metavar='N',
         help='number of flat (shutter open) exposures to take')
-    parser.add_argument('--tflat', type=float, default=10, metavar='SECONDS',
+    parser.add_argument('--tflat', type=float, default=1, metavar='SECONDS',
         help='flat exposure length in seconds')
     parser.add_argument('--outpath', type=str, metavar='PATH', default='.',
         help='existing path where output file are written')
