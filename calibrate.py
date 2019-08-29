@@ -149,7 +149,7 @@ def take_exposure(camera, exptime, fname, shutter_open=True, timeout=10, latchup
     if state != '0':
         print('Found unexpected CCD state {0} for {1}.'.format(state, fname))
         return False
-    if cooling and np.all(np.array(pwr_history) == 100) and np.min(temp_history) > temperature_setpoint + 2:
+    if cooling and np.any(np.array(pwr_history) == 100) and np.min(temp_history) > temperature_setpoint + 2:
         print('Detected cooling latchup!')
         if latchup_action is not None:
             latchup_action()
