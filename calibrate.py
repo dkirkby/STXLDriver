@@ -189,12 +189,12 @@ if __name__ == '__main__':
         help='number of zero-length exposures to take')
     parser.add_argument('--ndark', type=int, default=0, metavar='N',
         help='number of dark (shutter closed) exposures to take')
-    parser.add_argument('--tdark', type=float, default=120, metavar='SECONDS',
+    parser.add_argument('--tdark', type=float, default=120, metavar='T',
         help='dark exposure length in seconds')
     parser.add_argument('--nflat', type=int, default=0, metavar='N',
         help='number of flat (shutter open) exposures to take')
-    parser.add_argument('--tflat', type=float, default=1, metavar='SECONDS',
-        help='flat exposure length in seconds')
+    parser.add_argument('--tflat', type=str, default='0.5,1.0,1.5,2.0', metavar='T1,T2,...',
+        help='flat exposure lengths in seconds to cycle through')
     parser.add_argument('--outpath', type=str, metavar='PATH', default='.',
         help='existing path where output file are written')
     parser.add_argument('--zero-name', type=str, metavar='NAME', default='zero_{N}.fits',
@@ -209,6 +209,14 @@ if __name__ == '__main__':
     if not os.path.exists(outpath):
         print('Non-existant output path: {0}'.format(args.outpath))
         sys.exit(-1)
+
+    try:
+        tflat = [float(T) for T in args.tflat.split(',')]
+    except ValueError:
+        print('Invalid tflat: {0}'.format(args.tflat))
+        sys.exit(-1)
+    if args.nflat > 0 and args.nflat % len(tflat) > 0:
+        print('WARNING: nflat does not evenly divide number of flat exposure times.')
 
     C = Camera(URL=args.url, verbose=False)
     init = lambda: initialize(C, binning=args.binning, temperature_setpoint=args.temperature)
@@ -235,5 +243,8 @@ if __name__ == '__main__':
     fname_format = flat_name.format(N='{N:03d}')
     while i < i0 + args.nflat:
         fname = os.path.join(outpath, fname_format.format(N=i))
-        if take_exposure(C, exptime=args.tflat, fname=fname, shutter_open=True, latchup_action=init):
+        exptime = tflat[(i - i0) % len(tflat)]
+        if args.verbose:
+            print('Taking flat {0} of {1} with exptime={2}s.'.format(i + 1, args.nflat, exptime))
+        if take_exposure(C, exptime=exptime, fname=fname, shutter_open=True, latchup_action=init):
             i += 1
