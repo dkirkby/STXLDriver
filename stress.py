@@ -30,9 +30,15 @@ def initialize(camera, binning, temperature):
 
     # Initialize the camera
     # CoolerState: 0=off, 1=on.
-    # Fan: 1=auto, 2=manual, 3=disabled.
     logging.info('Initializing for {0}x{0} binning at {1}C...'.format(binning, temperature))
-    camera.write_setup(Bin=binning, CCDTemperatureSetpoint=temperature, CoolerState=1, Fan=2, FanSetpoint=50)
+    camera.write_setup(Bin=binning, CCDTemperatureSetpoint=temperature, CoolerState=1)
+    try:
+        # Fan: 1=auto, 2=manual, 3=disabled.
+        camera.write_setup(Fan=2, FanSetpoint=100.0)
+        time.sleep(2)
+        camera.write_setup(Fan=2, FanSetpoint=50.0)
+    except RuntimeError:
+        pass
     time.sleep(15)
 
 
