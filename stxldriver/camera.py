@@ -27,6 +27,7 @@ class Camera(object):
         self.setup = None
         self.network = None
         self.exposure_config = None
+        self.filter_names = None
 
     def _display(self, D):
         width = np.max([len(name) for name in D.keys() if name[0] != '_'])
@@ -122,6 +123,34 @@ class Camera(object):
             time.sleep(1)
         if not verified:
             raise RuntimeError('Failed to verify setup after {0} retries.'.format(max_retries))
+
+    def init_filter_wheel(self):
+        self._get('/filtersetup.html?Filter=0')
+
+    def read_filter_names(self, query='', verbose=True):
+        self.filter_names = self._read_form('/filtersetup.html' + query, 'FilterNames', verbose)
+
+    def set_filter(self, filter_number, verbose=True, wait=True, max_wait=10):
+        """Set the filter wheel position.
+        """
+        if filter_number not in (1, 2, 3, 4, 5, 6, 7, 8):
+            raise ValueError('Invalid filter_number: {0}.'.format(filter_number))
+        self.filter_names = self.read_filter_names(
+            query='Filter={0}'.format(filter_number), verbose=verbose)
+
+        if wait:
+            remaining = max_wait
+            while remaining > 0:
+                time.sleep(1)
+                status = self.call_api('FilterState.cgi')
+                if verbose:
+                    print('Filter wheel status is {0} with {1}s remaining...'.format(status, remaining))
+                if status[0] == '0': # Idle
+                    break
+                elif status[0] != '1' and status[1] != '': # Moving or unknown
+                    raise RuntimeError(
+                        'Failed to complete filter wheel move after {0} seconds.'.format(max_wait))
+                remaining -= 1
 
     def read_exposure_config(self, query='', verbose=True):
         self.exposure_config = self._read_form('/exposure.html' + query, 'Exposure', verbose)
