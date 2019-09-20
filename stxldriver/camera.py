@@ -17,12 +17,12 @@ class Camera(object):
     After creating a camera object, use the initialize() and
     take_exposure() methods for a high-level API.
     """
-    def __init__(self, URL='http://10.0.1.3', verbose=True, timeout=60.):
+    def __init__(self, URL='http://10.0.1.3', timeout=60.):
         self.URL = URL
         if self.URL.endswith('/'):
             self.URL = self.URL[:-1]
         self.timeout = timeout
-        self.read_info(verbose)
+        self.read_info()
         self.methods = (
             'ImagerGetSettings.cgi?CCDTemperature',
             'ImagerGetSettings.cgi?CoolerPower',
@@ -53,13 +53,12 @@ class Camera(object):
         except requests.exceptions.RequestException as e:
             raise RuntimeError('Unable to get "{0}":\n{1}'.format(path, e))
 
-    def read_info(self, verbose=True, timeout=None):
+    def read_info(self, timeout=None):
         response = self._get('/index.html', timeout=timeout)
         parser = IndexParser()
         parser.feed(response.text)
         self.properties = parser.properties
-        if verbose:
-            self._display(self.properties)
+        self._display(self.properties)
 
     def _read_form(self, path, name, verbose=True, timeout=None, return_response=False):
         response = self._get(path, timeout=timeout)
@@ -85,7 +84,7 @@ class Camera(object):
         queries = ['{0}={1}'.format(name, value) for name, value in params.items()]
         return params, '?' + '&'.join(queries)
 
-    def reboot(self, verbose=True):
+    def reboot(self):
         if self.network is None:
             # Read the current network setup if necessary.
             self.network = self._read_form('/network.html', 'EthernetParams', verbose=False)
@@ -98,7 +97,7 @@ class Camera(object):
         except RuntimeError as e:
             # This is expected. Wait 5s then try to load the info page and reset our state.
             time.sleep(5)
-            self.read_info(verbose=verbose)
+            self.read_info()
 
     def read_setup(self, query='', verbose=True):
         self.setup = self._read_form('/setup.html' + query, 'CameraSetup', verbose)
@@ -131,12 +130,12 @@ class Camera(object):
         if not verified:
             raise RuntimeError('Failed to verify setup after {0} retries.'.format(max_retries))
 
-    def init_filter_wheel(self, response=None, verbose=True):
+    def init_filter_wheel(self):
         """Initialize the filter wheel.
         """
-        self.read_filter_config(query='Filter=0', verbose=verbose)
+        self.read_filter_config(query='Filter=0')
 
-    def read_filter_config(self, query='', verbose=True):
+    def read_filter_config(self, query=''):
         self.filter_names, response = self._read_form(
             '/filtersetup.html' + query, 'FilterNames', verbose=False, return_response=True)
         parser = FilterParser()
@@ -146,13 +145,12 @@ class Camera(object):
         logging.info('Current filter is [{0}] {1}.'.format(
                      self.current_filter_number, self.current_filter_name))
 
-    def set_filter(self, filter_number, verbose=True, wait=True, max_wait=10):
+    def set_filter(self, filter_number, wait=True, max_wait=10):
         """Set the filter wheel position.
         """
         if filter_number not in (1, 2, 3, 4, 5, 6, 7, 8):
             raise ValueError('Invalid filter_number: {0}.'.format(filter_number))
-        self.filter_names = self.read_filter_config(
-            query='Filter={0}'.format(filter_number), verbose=verbose)
+        self.filter_names = self.read_filter_config(query='Filter={0}'.format(filter_number))
         if self.current_filter_number != filter_number:
             raise RuntimeError('Filter number mismatch: current={0} but requested={1}.'
                                .format(self.current_filter_number, filter_number))
@@ -297,7 +295,6 @@ class Camera(object):
             if low_temperature_ok and tavg < temperature_setpoint:
                 # Average temperature is below the setpoint and this is ok.
                 break
-
 
     def take_exposure(self, exptime, fname, shutter_open=True, timeout=10, latchup_action=None):
         """Take one exposure.

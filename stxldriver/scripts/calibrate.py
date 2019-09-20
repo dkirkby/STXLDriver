@@ -28,6 +28,8 @@ def main():
     parser = argparse.ArgumentParser(
         description='Collect calibration data from an STXL camera.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-v', '--verbose', action='store_true',
+        help='include DEBUG messages in the output log')
     parser.add_argument('--url', default='http://10.0.1.3',
         help='camera interface URL to use')
     parser.add_argument('-b', '--binning', type=int, choices=(1, 2, 3), default=1,
@@ -56,8 +58,9 @@ def main():
         help='Name of log file to write (default is stdout)')
     args = parser.parse_args()
 
-    logging.basicConfig(filename=args.log, level=logging.INFO,
+    logging.basicConfig(filename=args.log, level=logging.DEBUG if args.verbose else logging.INFO,
         format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
+    logging.getLogger('urllib3').setLevel(logging.INFO)
     logging.getLogger('requests').setLevel(logging.WARNING)
 
     outpath = os.path.abspath(args.outpath)
@@ -73,7 +76,7 @@ def main():
     if args.nflat > 0 and args.nflat % len(tflat) > 0:
         logging.warning('nflat does not evenly divide number of flat exposure times.')
 
-    C = Camera(URL=args.url, verbose=False)
+    C = Camera(URL=args.url)
     init = lambda: C.initialize(binning=args.binning, temperature_setpoint=args.temperature)
     init()
 

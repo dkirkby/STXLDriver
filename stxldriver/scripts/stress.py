@@ -26,6 +26,8 @@ def main():
     parser = argparse.ArgumentParser(
         description='Stress test for STXL camera readout.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-v', '--verbose', action='store_true',
+        help='include DEBUG messages in the output log')
     parser.add_argument('--url', default='http://10.0.1.3',
         help='Camera interface URL to use')
     parser.add_argument('-t', '--exptime', type=float, default=5.,
@@ -42,11 +44,12 @@ def main():
         help='Logging interval in units of exposures')
     args = parser.parse_args()
 
-    logging.basicConfig(filename=args.log, level=logging.INFO,
+    logging.basicConfig(filename=args.log, level=logging.DEBUG if args.verbose else logging.INFO,
         format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
+    logging.getLogger('urllib3').setLevel(logging.INFO)
     logging.getLogger('requests').setLevel(logging.WARNING)
 
-    C = Camera(URL=args.url, verbose=False)
+    C = Camera(URL=args.url)
     init = lambda: C.initialize(binning=args.binning, temperature_setpoint=args.temperature)
     init()
 
