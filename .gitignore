@@ -1,4 +1,7 @@
 stxldriver/__pycache__
+stxldriver/scripts/__pycache__
+stxldriver.egg-info
+
 data/*.fits
 nohup.out
 *.log
