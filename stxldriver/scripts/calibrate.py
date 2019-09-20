@@ -1,3 +1,9 @@
+"""Collect a sequence of zero, dark and flat exposures, e.g.
+
+stxlcalib --url http://10.0.1.3 --nzero 3 --ndark 3 --tdark 1 --nflat 3 --tflat 0.5,1,2 --outpath calibdata
+
+For more options, use stxlcalib --help.
+"""
 import time
 import argparse
 import os.path
@@ -5,7 +11,6 @@ import sys
 import glob
 import re
 import logging
-
 
 import numpy as np
 

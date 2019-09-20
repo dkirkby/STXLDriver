@@ -1,8 +1,8 @@
-"""Stress test driver for SkyCamera exposures.
+"""Stress test an STXL camera using this driver.
 
 Can be run in the background using, e.g.
 
-  nohup python stress.py --url http://10.0.1.3 --exptime 5 &
+  nohup stxlstress --url http://10.0.1.3 --exptime 5 --log stress.log &
 
 To monitor progress:
 
