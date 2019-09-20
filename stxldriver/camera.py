@@ -11,7 +11,11 @@ from .parse import IndexParser, FormParser, FilterParser
 
 
 class Camera(object):
+    """Driver for a single STXL camera identified by its URL.
 
+    After creating a camera object, use the initialize() and
+    take_exposure() methods for a high-level API.
+    """
     def __init__(self, URL='http://10.0.1.3', verbose=True, timeout=60.):
         self.URL = URL
         if self.URL.endswith('/'):
@@ -214,3 +218,152 @@ class Camera(object):
             return response.text.strip()
         except requests.exceptions.RequestException as e:
             raise RuntimeError('Unable to call API method "{0}":\n{1}'.format(method, e))
+
+    def initialize(self, binning=2, reboot=True, fan_setpoint=50, temperature_setpoint=15,
+                num_temperature_samples=10, max_tavg_error=0.05, low_temperature_ok=False):
+        """Initialize the camera for data taking.
+
+        Must be called before :meth:`take_exposure`.
+
+        The time required to initialize will depend on whether a `reboot` is requested
+        and how the cooling is configured.
+
+        Parameters
+        ----------
+        binning : 1, 2 or 3
+            The readout binning factor to use.
+        reboot : bool
+            Reboot the camera before initializing when True.
+        fan_setpoint : float or None
+            Use the specified percentage (0-100) fan speed, or allow the fan speed to be
+            set automatically when None.
+        temperature_setpoint : float or None
+            Operate at the specified temperature (0-30) in degC, or disable active cooling
+            when None.  When a setpoint is specified, this method will wait until it has
+            been reached before returning.  The remaining parameters determine exactly how
+            this is implemented.
+        num_temperature_samples : int
+            The current temperature is an average of this many samples taken at 1Hz.
+        max_tavg_error : float
+            The average used to estimate the current temperature must be within this range
+            of the setpoint (in degC) in order to consider the camera to have reached its
+            setpoint.
+        low_temperature_ok : bool
+            The camera is considered initialized if its average temperature is below the
+            setpoint when True.  This is needed when the setpoint is above the ambient
+            temperature, but means that the camera is operating only with an upper
+            bound on its temperature.
+        """
+        if reboot:
+            print('Rebooting...')
+            self.reboot()
+        if fan_setpoint is None:
+            # The fan speed is set automatically.
+            self.write_setup(Fan=1)
+        else:
+            if fan_setpoint < 0 or fan_setpoint > 100:
+                raise ValueError('Invalid fan_setpoint {0}%. Must be 0-100.'.format(fan_setpoint))
+            # For some reason, several retries are sometimes necesary to change the fan setup.
+            try:
+                # Set 100% then the desired value to provide some audible feedback.
+                self.write_setup(Fan=2, FanSetpoint=100.0)
+                time.sleep(2)
+                self.write_setup(Fan=2, FanSetpoint=float(fan_setpoint))
+            except RuntimeError as e:
+                # This sometimes happens but we keep going when it does.
+                pass
+        if temperature_setpoint is None:
+            self.write_setup(CoolerState=0)
+        else:
+            if temperature_setpoint < 0 or temperature_setpoint > 30:
+                raise ValueError('Invalid temperature_setpoint {0}C. Must be 0-30.',format(temperature_setpoint))
+            self.write_setup(CCDTemperatureSetpoint=float(temperature_setpoint), CoolerState=1)
+        self.write_setup(Bin=binning)
+        print('Waiting for cooldown to {0:.1f}C...'.format(temperature_setpoint))
+        history = []
+        while True:
+            time.sleep(1)
+            history.append(float(self.call_api('ImagerGetSettings.cgi?CCDTemperature')))
+            tavg = np.mean(history[-num_temperature_samples:])
+            print('  T={0:.3f}, Tavg={1:.3f}'.format(history[-1], tavg))
+            if len(history) < num_temperature_samples:
+                # Wait to accumulate more samples.
+                continue
+            if np.abs(tavg - temperature_setpoint) < max_tavg_error:
+                # Average temperature is close enough to the setpoint.
+                break
+            if low_temperature_ok and tavg < temperature_setpoint:
+                # Average temperature is below the setpoint and this is ok.
+                break
+
+
+    def take_exposure(self, exptime, fname, shutter_open=True, timeout=10, latchup_action=None):
+        """Take one exposure.
+
+        The camera must be initialized first.
+
+        Parameters
+        ----------
+        exptime : float
+            The exposure time in seconds to use. Can be zero.
+        fname : str
+            The name of the FITS file where a successful exposure will be saved.
+        shutter_open : bool
+            When True, the shutter will be open during the exposure.
+        timeout : float
+            If the camera state has not changed to Idle after exptime + timeout,
+            assume there is a problem. Value is in seconds.
+        latchup_action : callable or None
+            Function to call if a cooling latchup condition is detected or None.
+            When None, a latchup is ignored. Otherwise this function is called
+            and we return False without saving the data.
+
+        Returns
+        -------
+        bool
+            True when a FITS file was successfully written.
+        """
+        # Lookup the current temperature setpoint.
+        if self.setup is None:
+            raise RuntimeError('Camera has not been initialized.')
+        cooling = int(self.setup['CoolerState']) == 1
+        temperature_setpoint = float(self.setup['CCDTemperatureSetpoint'])
+        # Start the exposure.
+        ImageType = 1 if shutter_open else 0
+        self.start_exposure(ExposureTime=float(exptime), ImageType=ImageType, Contrast=1)
+        # Monitor the temperature and cooler power during the exposure.
+        cutoff = time.time() + exptime + timeout
+        state = '?'
+        temp_history, pwr_history = [], []
+        while time.time() < cutoff:
+            # Read the current state, but keep going in case of a network problem.
+            try:
+                if cooling:
+                    temp_now = float(self.call_api('ImagerGetSettings.cgi?CCDTemperature'))
+                    pwr_now = float(self.call_api('ImagerGetSettings.cgi?CoolerPower'))
+                    temp_history.append(temp_now)
+                    pwr_history.append(pwr_now)
+                # State: 0=Idle, 2=Exposing
+                state = self.call_api('CurrentCCDState.cgi')
+                if state == '0':
+                    break
+            except RuntimeError as e:
+                print('Unable to read current state:\n{0}'.format(e))
+            time.sleep(1.0)
+        if cooling:
+            msg = ('T {0:4.1f}/{1:4.1f}/{2:4.1f}C PWR {3:2.0f}/{4:2.0f}/{5:2.0f}%'
+                .format(*np.percentile(temp_history, (0, 50, 100)),
+                        *np.percentile(pwr_history, (0, 50, 100))))
+            print(msg)
+        if state != '0':
+            print('Found unexpected CCD state {0} for {1}.'.format(state, fname))
+            return False
+        if cooling and np.any(np.array(pwr_history) == 100) and np.min(temp_history) > temperature_setpoint + 2:
+            print('Detected cooling latchup!')
+            if latchup_action is not None:
+                latchup_action()
+                return False
+        # Read the data from the camera.
+        self.save_exposure(fname)
+        print('Saved {0}'.format(fname))
+        return True
