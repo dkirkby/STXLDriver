@@ -2,6 +2,7 @@ import datetime
 import collections
 import random
 import time
+import logging
 
 import requests
 
@@ -39,7 +40,7 @@ class Camera(object):
         for name, value in D.items():
             if name[0] == '_':
                 continue
-            print(fmt.format(name, value))
+            logging.info(fmt.format(name, value))
 
     def _get(self, path, stream=False, timeout=None):
         if timeout is None:
@@ -121,8 +122,7 @@ class Camera(object):
                 if read_value != value:
                     verified = False
                     msg = 'wrote {0}={1} but read {2}.'.format(name, value, read_value)
-                    if verbose:
-                        print(msg)
+                    logging.info(msg)
             if verified:
                 break
             # Re-read the current setup before retrying.
@@ -143,9 +143,8 @@ class Camera(object):
         parser.feed(response.text)
         self.current_filter_number = parser.current_filter_number
         self.current_filter_name = self.filter_names['Filter{0}'.format(self.current_filter_number)]
-        if verbose:
-            print('Current filter is [{0}] {1}.'.format(
-                self.current_filter_number, self.current_filter_name))
+        logging.info('Current filter is [{0}] {1}.'.format(
+                     self.current_filter_number, self.current_filter_name))
 
     def set_filter(self, filter_number, verbose=True, wait=True, max_wait=10):
         """Set the filter wheel position.
@@ -162,8 +161,7 @@ class Camera(object):
             while remaining > 0:
                 time.sleep(1)
                 status = self.call_api('FilterState.cgi')
-                if verbose:
-                    print('Filter wheel status is {0} with {1}s remaining...'.format(status, remaining))
+                logging.debug('Filter wheel status is {0} with {1}s remaining...'.format(status, remaining))
                 if status[0] == '0': # Idle
                     break
                 elif status[0] != '1' and status[1] != '': # Moving or unknown
@@ -186,14 +184,14 @@ class Camera(object):
         now = datetime.datetime.now()
         micros = round(now.microsecond, -3)
         if micros < 0:
-            print('Got micros < 0:', micros)
+            logging.warning('Got micros < 0:', micros)
             micros = 0
         if micros > 999000:
-            print('Got micros > 999000:', micros)
+            logging.warning('Got micros > 999000:', micros)
             micros = 999000
         truncated = now.replace(microsecond = micros).isoformat()
         if truncated[-3:] != '000':
-            print('DEBUG', now, micros, truncated)
+            logging.warning('truncated[-3:] != 000:', now, micros, truncated)
         kwargs['DateTime'] = truncated[:-3]
         # Prepare the exposure parameters to use.
         new_exposure, query = self._build_query(self.exposure_config, kwargs)
@@ -259,7 +257,7 @@ class Camera(object):
             bound on its temperature.
         """
         if reboot:
-            print('Rebooting...')
+            logging.warning('Rebooting...')
             self.reboot()
         if fan_setpoint is None:
             # The fan speed is set automatically.
@@ -283,13 +281,13 @@ class Camera(object):
                 raise ValueError('Invalid temperature_setpoint {0}C. Must be 0-30.',format(temperature_setpoint))
             self.write_setup(CCDTemperatureSetpoint=float(temperature_setpoint), CoolerState=1)
         self.write_setup(Bin=binning)
-        print('Waiting for cooldown to {0:.1f}C...'.format(temperature_setpoint))
+        logging.info('Waiting for cooldown to {0:.1f}C...'.format(temperature_setpoint))
         history = []
         while True:
             time.sleep(1)
             history.append(float(self.call_api('ImagerGetSettings.cgi?CCDTemperature')))
             tavg = np.mean(history[-num_temperature_samples:])
-            print('  T={0:.3f}, Tavg={1:.3f}'.format(history[-1], tavg))
+            logging.debug('Cooling down: T={0:.3f}, Tavg={1:.3f}'.format(history[-1], tavg))
             if len(history) < num_temperature_samples:
                 # Wait to accumulate more samples.
                 continue
@@ -352,22 +350,22 @@ class Camera(object):
                 if state == '0':
                     break
             except RuntimeError as e:
-                print('Unable to read current state:\n{0}'.format(e))
+                logging.warning('Unable to read current state:\n{0}'.format(e))
             time.sleep(1.0)
         if cooling:
             msg = ('T {0:4.1f}/{1:4.1f}/{2:4.1f}C PWR {3:2.0f}/{4:2.0f}/{5:2.0f}%'
                 .format(*np.percentile(temp_history, (0, 50, 100)),
                         *np.percentile(pwr_history, (0, 50, 100))))
-            print(msg)
+            logging.debug(msg)
         if state != '0':
-            print('Found unexpected CCD state {0} for {1}.'.format(state, fname))
+            logging.warning('Found unexpected CCD state {0} for {1}.'.format(state, fname))
             return False
         if cooling and np.any(np.array(pwr_history) == 100) and np.min(temp_history) > temperature_setpoint + 2:
-            print('Detected cooling latchup!')
+            logging.warning('Detected cooling latchup!')
             if latchup_action is not None:
                 latchup_action()
                 return False
         # Read the data from the camera.
         self.save_exposure(fname)
-        print('Saved {0}'.format(fname))
+        logging.debug('Saved {0}'.format(fname))
         return True

@@ -36,16 +36,14 @@ def main():
         help='Temperature setpoint to use in C')
     parser.add_argument('--outname', type=str, default='out.fits',
         help='Name of FITS file to write after each exposure')
-    parser.add_argument('--log', default=None,
+    parser.add_argument('--log', type=str, default=None,
         help='Name of log file to write (default is stdout)')
     parser.add_argument('--ival', type=int, default=10,
         help='Logging interval in units of exposures')
-    parser.add_argument('--simulate', action='store_true',
-        help='Add simulated fiber flux and run analysis')
     args = parser.parse_args()
 
-    logging.basicConfig(filename=args.log, level=logging.INFO, format='%(asctime)s %(message)s',
-        datefmt='%m/%d/%Y %H:%M:%S')
+    logging.basicConfig(filename=args.log, level=logging.INFO,
+        format='%(asctime)s %(levelname)s %(message)s', datefmt='%m/%d/%Y %H:%M:%S')
     logging.getLogger('requests').setLevel(logging.WARNING)
 
     C = Camera(URL=args.url, verbose=False)
