@@ -22,82 +22,6 @@ import numpy as np
 from stxldriver.camera import Camera
 
 
-def initialize(camera, binning, temperature):
-
-    logging.info('Rebooting...')
-    camera.reboot()
-    time.sleep(30)
-
-    # Initialize the camera
-    # CoolerState: 0=off, 1=on.
-    logging.info('Initializing for {0}x{0} binning at {1}C...'.format(binning, temperature))
-    camera.write_setup(Bin=binning, CCDTemperatureSetpoint=temperature, CoolerState=1)
-    try:
-        # Fan: 1=auto, 2=manual, 3=disabled.
-        camera.write_setup(Fan=2, FanSetpoint=100.0)
-        time.sleep(2)
-        camera.write_setup(Fan=2, FanSetpoint=50.0)
-    except RuntimeError:
-        pass
-    time.sleep(15)
-
-
-def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
-
-    initialize(camera, binning, temperature)
-    logging.info('Running until ^C or kill -SIGINT {0}'.format(os.getpgid(0)))
-    nexp, last_nexp = 0, 0
-    temp_history, pwr_history = [], []
-    start = time.time()
-    try:
-        while True:
-            # Start the next exposure.
-            # ImageType: 0=dark, 1=light, 2=bias, 3=flat.
-            # Contrast: 0=auto, 1=manual.
-            camera.start_exposure(ExposureTime=exptime, ImageType=1, Contrast=1)
-            # Monitor the temperature and cooler power during the exposure.
-            cutoff = time.time() + exptime + timeout
-            state = '?'
-            while time.time() < cutoff:
-                # Read the current state, but keep going in case of a network problem.
-                try:
-                    temp_now = float(camera.call_api('ImagerGetSettings.cgi?CCDTemperature'))
-                    pwr_now = float(camera.call_api('ImagerGetSettings.cgi?CoolerPower'))
-                    state = camera.call_api('CurrentCCDState.cgi')
-                    temp_history.append(temp_now)
-                    pwr_history.append(pwr_now)
-                    # State: 0=Idle, 2=Exposing
-                    if state == '0':
-                        break
-                except RuntimeError as e:
-                    logging.warning(e)
-                time.sleep(1.0)
-            if state != '0':
-                logging.warning('Found unexpected CCD state {0} after exposure {1}.'.format(state, nexp + 1))
-            else:
-                # Read the data from the camera, always using the same filename.
-                camera.save_exposure('tmp.fits')
-            nexp += 1
-            if nexp % interval == 0:
-                elapsed = time.time() - start
-                deadtime = elapsed / (nexp - last_nexp) - exptime
-                load = os.getloadavg()[1] # 5-min average number of processes in the system run queue.
-                msg = ('nexp={0:05d}: dead {1:.1f}s, T {2:4.1f}/{3:4.1f}/{4:4.1f}C PWR {5:2.0f}/{6:2.0f}/{7:2.0f}% LOAD {8:.1f}'
-                       .format(nexp, deadtime, *np.percentile(temp_history, (0, 50, 100)),
-                               *np.percentile(pwr_history, (0, 50, 100)), load))
-                logging.info(msg)
-                # Test for cooling latchup.
-                if np.any(np.array(pwr_history) == 100) and np.min(temp_history) > temperature + 2:
-                    logging.warning('Detected cooling latchup!')
-                    initialize(camera, binning, temperature)
-                # Reset statistics
-                last_nexp = nexp
-                temp_history, pwr_history = [], []
-                start = time.time()
-    except KeyboardInterrupt:
-        logging.info('\nbye')
-
-
 def main():
     parser = argparse.ArgumentParser(
         description='Stress test for STXL camera readout.',
@@ -113,7 +37,7 @@ def main():
     parser.add_argument('--outname', type=str, default='out.fits',
         help='Name of FITS file to write after each exposure')
     parser.add_argument('--log', default=None,
-        help='Name of log file to write')
+        help='Name of log file to write (default is stdout)')
     parser.add_argument('--ival', type=int, default=10,
         help='Logging interval in units of exposures')
     parser.add_argument('--simulate', action='store_true',
@@ -129,18 +53,20 @@ def main():
     init()
 
     logging.info('Running until ^C or kill -SIGINT {0}'.format(os.getpgid(0)))
-    nexp, last_nexp = 0, 0
+    nexp, nbad, last_nexp = 0, 0, 0
     start = time.time()
     try:
         while True:
             success = C.take_exposure(args.exptime, args.outname, latchup_action=init)
             nexp += 1
-            if nexp % interval == 0:
+            if not success:
+                nbad += 1
+            if nexp % args.ival == 0:
                 elapsed = time.time() - start
                 deadtime = elapsed / (nexp - last_nexp) - args.exptime
                 load = os.getloadavg()[1] # 5-min average number of processes in the system run queue.
-                msg = ('nexp={0:05d}: deadtime {1:.1f}s/exp LOAD {8:.1f}'
-                       .format(nexp, deadtime, load))
+                msg = ('nexp={0:05d}: nbad={1} deadtime {2:.1f}s/exp LOAD {3:.1f}'
+                       .format(nexp, nbad, deadtime, load))
                 logging.info(msg)
                 # Reset statistics
                 last_nexp = nexp
