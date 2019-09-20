@@ -127,8 +127,10 @@ class Camera(object):
         if not verified:
             raise RuntimeError('Failed to verify setup after {0} retries.'.format(max_retries))
 
-    def init_filter_wheel(self):
-        self._get('/filtersetup.html?Filter=0')
+    def init_filter_wheel(self, response=None, verbose=True):
+        """Initialize the filter wheel.
+        """
+        self.read_filter_config(query='Filter=0', verbose=verbose)
 
     def read_filter_config(self, query='', verbose=True):
         self.filter_names, response = self._read_form(
