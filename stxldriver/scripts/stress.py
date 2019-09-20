@@ -42,7 +42,7 @@ def initialize(camera, binning, temperature):
     time.sleep(15)
 
 
-def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10, processor=None):
+def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10):
 
     initialize(camera, binning, temperature)
     logging.info('Running until ^C or kill -SIGINT {0}'.format(os.getpgid(0)))
@@ -76,9 +76,7 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10, 
                 logging.warning('Found unexpected CCD state {0} after exposure {1}.'.format(state, nexp + 1))
             else:
                 # Read the data from the camera, always using the same filename.
-                camera.save_exposure('data/tmp.fits')
-                if processor is not None:
-                    processor('data/tmp.fits')
+                camera.save_exposure('tmp.fits')
             nexp += 1
             if nexp % interval == 0:
                 elapsed = time.time() - start
@@ -100,8 +98,10 @@ def stress_test(camera, exptime, binning, temperature, interval=10, timeout=10, 
         logging.info('\nbye')
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='STXL stress test.')
+def main():
+    parser = argparse.ArgumentParser(
+        description='Stress test for STXL camera readout.',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--url', default='http://10.0.1.3',
         help='Camera interface URL to use')
     parser.add_argument('-t', '--exptime', type=float, default=5.,
@@ -122,32 +122,8 @@ if __name__ == '__main__':
         datefmt='%m/%d/%Y %H:%M:%S')
     logging.getLogger('requests').setLevel(logging.WARNING)
 
-    if args.simulate:
-        try:
-            import desietcimg.sky
-        except ImportError:
-            print('The desietcimg package must be installed to use --simulate.')
-            sys.exit(-1)
-        import fitsio
-        rng = np.random.RandomState()
-        SCA = desietcimg.sky.SkyCameraAnalysis(binning=args.binning)
-        SCA.load_fiber_locations()
-        true_means = desietcimg.sky.init_signals(SCA.fibers, max_signal=5000., attenuation=0.95)
-        simout = open('simulate.csv', 'w')
-        logging.info('Simulation analysis results will be saved to simulate.csv')
-        labels = [label for label in SCA.fibers]
-        print(*labels, sep=',', file=simout)
-        def processor(name):
-            bg = fitsio.read(name)
-            data, true_detected = desietcimg.sky.add_fiber_signals(bg, true_means, SCA, rng=rng)
-            measured = SCA.get_fiber_fluxes(data)
-            values = [measured[label][3] for label in labels]
-            print(*values, sep=',', file=simout, flush=True)
-    else:
-        processor = None
-
     C = Camera(URL=args.url, verbose=False)
-    stress_test(C, args.exptime, args.binning, args.temperature, args.ival, processor=processor)
+    stress_test(C, args.exptime, args.binning, args.temperature, args.ival)
 
     if args.simulate:
         simout.close()

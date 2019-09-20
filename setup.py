@@ -13,6 +13,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'stxlcalib=stxldriver.scripts.calibrate:main',
+            'stxlstress=stxldriver.scripts.stress:main',
         ],
     }
 )
