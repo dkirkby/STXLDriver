@@ -2,7 +2,8 @@ stxldriver/__pycache__
 stxldriver/scripts/__pycache__
 stxldriver.egg-info
 
-data/*.fits
+dist
+
 nohup.out
 *.log
 *.png
