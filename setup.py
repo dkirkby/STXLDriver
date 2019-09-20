@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='stxldriver',
-    version='0.1.dev0',
+    version='0.1',
     description='HTTP Driver for SBIG STXL Cameras',
     url='http://github.com/dkirkby/STXLDriver',
     author='David Kirkby',
