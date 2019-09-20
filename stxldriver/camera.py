@@ -175,6 +175,10 @@ class Camera(object):
         self.exposure_config = self._read_form('/exposure.html' + query, 'Exposure', verbose)
 
     def start_exposure(self, **kwargs):
+        """
+        ImageType: 0=dark, 1=light, 2=bias, 3=flat.
+        Contrast: 0=auto, 1=manual.
+        """
         if self.exposure_config is None:
             self.read_exposure_config(verbose=False)
         # Save the current time formatted as a UTC ISO string.

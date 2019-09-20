@@ -110,7 +110,9 @@ def main():
         help='Camera pixel binning to use')
     parser.add_argument('-T', '--temperature', type=float, default=15.,
         help='Temperature setpoint to use in C')
-    parser.add_argument('--log', default='stress.log',
+    parser.add_argument('--outname', type=str, default='out.fits',
+        help='Name of FITS file to write after each exposure')
+    parser.add_argument('--log', default=None,
         help='Name of log file to write')
     parser.add_argument('--ival', type=int, default=10,
         help='Logging interval in units of exposures')
@@ -123,7 +125,25 @@ def main():
     logging.getLogger('requests').setLevel(logging.WARNING)
 
     C = Camera(URL=args.url, verbose=False)
-    stress_test(C, args.exptime, args.binning, args.temperature, args.ival)
+    init = lambda: C.initialize(binning=args.binning, temperature_setpoint=args.temperature)
+    init()
 
-    if args.simulate:
-        simout.close()
+    logging.info('Running until ^C or kill -SIGINT {0}'.format(os.getpgid(0)))
+    nexp, last_nexp = 0, 0
+    start = time.time()
+    try:
+        while True:
+            success = C.take_exposure(args.exptime, args.outname, latchup_action=init)
+            nexp += 1
+            if nexp % interval == 0:
+                elapsed = time.time() - start
+                deadtime = elapsed / (nexp - last_nexp) - args.exptime
+                load = os.getloadavg()[1] # 5-min average number of processes in the system run queue.
+                msg = ('nexp={0:05d}: deadtime {1:.1f}s/exp LOAD {8:.1f}'
+                       .format(nexp, deadtime, load))
+                logging.info(msg)
+                # Reset statistics
+                last_nexp = nexp
+                start = time.time()
+    except KeyboardInterrupt:
+        logging.info('\nbye')
