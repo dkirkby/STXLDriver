@@ -7,7 +7,7 @@ import requests
 
 import numpy as np
 
-from .parse import IndexParser, FormParser
+from .parse import IndexParser, FormParser, FilterParser
 
 
 class Camera(object):
@@ -56,14 +56,17 @@ class Camera(object):
         if verbose:
             self._display(self.properties)
 
-    def _read_form(self, path, name, verbose=True, timeout=None):
+    def _read_form(self, path, name, verbose=True, timeout=None, return_response=False):
         response = self._get(path, timeout=timeout)
         parser = FormParser()
         parser.feed(response.text)
         form = parser.forms[name]
         if verbose:
             self._display(form)
-        return form
+        if return_response:
+            return form, response
+        else:
+            return form
 
     def _build_query(self, defaults, kwargs):
         # Build the new setup to write.
@@ -127,17 +130,27 @@ class Camera(object):
     def init_filter_wheel(self):
         self._get('/filtersetup.html?Filter=0')
 
-    def read_filter_names(self, query='', verbose=True):
-        self.filter_names = self._read_form('/filtersetup.html' + query, 'FilterNames', verbose)
+    def read_filter_config(self, query='', verbose=True):
+        self.filter_names, response = self._read_form(
+            '/filtersetup.html' + query, 'FilterNames', verbose=False, return_response=True)
+        parser = FilterParser()
+        parser.feed(response.text)
+        self.current_filter_number = parser.current_filter_number
+        self.current_filter_name = self.filter_names['Filter{0}'.format(self.current_filter_number)]
+        if verbose:
+            print('Current filter is [{0}] {1}.'.format(
+                self.current_filter_number, self.current_filter_name))
 
     def set_filter(self, filter_number, verbose=True, wait=True, max_wait=10):
         """Set the filter wheel position.
         """
         if filter_number not in (1, 2, 3, 4, 5, 6, 7, 8):
             raise ValueError('Invalid filter_number: {0}.'.format(filter_number))
-        self.filter_names = self.read_filter_names(
+        self.filter_names = self.read_filter_config(
             query='Filter={0}'.format(filter_number), verbose=verbose)
-
+        if self.current_filter_number != filter_number:
+            raise RuntimeError('Filter number mismatch: current={0} but requested={1}.'
+                               .format(self.current_filter_number, filter_number))
         if wait:
             remaining = max_wait
             while remaining > 0:

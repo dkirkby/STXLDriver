@@ -84,3 +84,21 @@ class FormParser(html.parser.HTMLParser):
         if tag == 'form':
             self.form = None
             self.form_name = None
+
+
+class FilterParser(html.parser.HTMLParser):
+    """Parse the response from /filtersetup.html to extract the current filter number.
+    """
+    def __init__(self):
+        super(FilterParser, self).__init__()
+        self.current_filter_number = None
+
+    def handle_starttag(self, tag, attrs):
+        if tag == 'option':
+            name, value = attrs.pop(0)
+            assert name == 'value'
+            filter_number = int(value)
+            if len(attrs) > 0:
+                name, value = attrs.pop(0)
+                assert name == 'selected' and value is None
+                self.current_filter_number = filter_number
