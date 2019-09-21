@@ -71,3 +71,14 @@ try:
 catch RuntimeError:
     pass
 ```
+
+### Verbose Logging
+
+This driver has some potentially useful `INFO` and `DEBUG` messages but, if you set the global log level to these values,
+you will be swamped by log messages from the lower-level networking packages.  To avoid this, set their log levels individually, e.g.
+```
+import logging
+logging.basicConfig(level=logging.DEBUG, ...)
+logging.getLogger('urllib3').setLevel(logging.INFO)
+logging.getLogger('requests').setLevel(logging.WARNING)
+```
