@@ -42,7 +42,7 @@ examples of using this driver.
 
 This package includes two command-line scripts: `stxlcalib` and `stxlstress`.  The first is to automatically collect a sequence of calibration zeros, darks and flats.  The second starts a long-running "stress test" of your camera and this driver, performing a repeated cycle of open-shutter exposures.  Use this to checkout a camera or observe the temperature latchup recovery described below.
 
-### Temperature Latchup
+## Temperature Latchup
 
 All STXL-6303 cameras I have used periodically experience "temperature latchup", where the temperature is significantly higher than the setpoint and the cooling power is at 100%.  The `take_exposure` method demonstrated above can automatically detect and recover from this condition, without requiring a power cycle.  The recommended pattern for this is:
 ```
