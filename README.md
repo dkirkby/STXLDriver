@@ -29,7 +29,7 @@ C.take_exposure(exptime=0, fname='zero.fits', shutter_open=False)
 C.take_exposure(exptime=10, fname='dark.fits', shutter_open=False)
 C.take_exposure(exptime=100, fname='science.fits', shutter_open=True)
 ```
-If you have a filter wheel installed, you can also control through the same object, e.g.
+If you have a filter wheel installed, you can also control it through the same object, e.g.
 ```
 C.set_filter(filter_number=3)
 ```
