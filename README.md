@@ -42,7 +42,9 @@ examples of using this driver.
 
 This package includes two command-line scripts: `stxlcalib` and `stxlstress`.  The first is to automatically collect a sequence of calibration zeros, darks and flats.  The second starts a long-running "stress test" of your camera and this driver, performing a repeated cycle of open-shutter exposures.  Use this to checkout a camera or observe the temperature latchup recovery described below.
 
-## Temperature Latchup
+## Known Issues
+
+### Temperature Latchup
 
 All STXL-6303 cameras I have used periodically experience "temperature latchup", where the temperature is significantly higher than the setpoint and the cooling power is at 100%.  The `take_exposure` method demonstrated above can automatically detect and recover from this condition, without requiring a power cycle.  The recommended pattern for this is:
 ```
@@ -52,3 +54,20 @@ init()
 success = C.take_exposure(..., latchup_action=init)
 ```
 This approach will automatically detect a latchup, and reboot and reconfigure the camera when one occurs, then return `False`.
+
+### Fan Setpoint
+
+Writing a new value of the fan setpoint is not reliable, and will sometimes appear to succeed but actually not change the previous value.  For this reason, the `initialize` method will not complain when this happens, but you will see an `INFO` logging  message like:
+```
+09/20/2019 17:13:49 INFO wrote FanSetpoint=100.0 but read 63.0.
+09/20/2019 17:13:49 INFO wrote Fan=2 but read 1.
+```
+Note that this is only an issue if you are trying to set a manual fan speed, and setting the more critical temperature setpoint apopears to be reliable.
+
+To handle this in your own code, if you are working at a lower level than `initialize` and `take_exposure`, you will need to catch the `RuntimeError` that is raised whenever any configuration data is not correctly updated, e.g.
+```
+try:
+    self.write_setup(Fan=2, FanSetpoint=100.0)
+catch RuntimeError:
+    pass
+```
