@@ -185,11 +185,11 @@ class Camera(object):
             logging.warning('Got micros < 0:', micros)
             micros = 0
         if micros > 999000:
-            logging.warning('Got micros > 999000:', micros)
+            logging.warning('Got micros > 999000: {0}'.format(micros))
             micros = 999000
         truncated = now.replace(microsecond = micros).isoformat()
         if truncated[-3:] != '000':
-            logging.warning('truncated[-3:] != 000:', now, micros, truncated)
+            logging.warning('truncated[-3:] != 000: {0}, {1}, {2}'.format(now, micros, truncated))
         kwargs['DateTime'] = truncated[:-3]
         # Prepare the exposure parameters to use.
         new_exposure, query = self._build_query(self.exposure_config, kwargs)
