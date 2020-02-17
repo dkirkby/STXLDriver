@@ -272,13 +272,14 @@ class Camera(object):
             except RuntimeError as e:
                 # This sometimes happens but we keep going when it does.
                 pass
+        self.write_setup(Bin=binning)
         if temperature_setpoint is None:
             self.write_setup(CoolerState=0)
-        else:
-            if temperature_setpoint < 0 or temperature_setpoint > 30:
-                raise ValueError('Invalid temperature_setpoint {0}C. Must be 0-30.',format(temperature_setpoint))
-            self.write_setup(CCDTemperatureSetpoint=float(temperature_setpoint), CoolerState=1)
-        self.write_setup(Bin=binning)
+            return
+        # Temperature regulation requested
+        if temperature_setpoint < 0 or temperature_setpoint > 30:
+            raise ValueError('Invalid temperature_setpoint {0}C. Must be 0-30.',format(temperature_setpoint))
+        self.write_setup(CCDTemperatureSetpoint=float(temperature_setpoint), CoolerState=1)
         logging.info('Waiting for cooldown to {0:.1f}C...'.format(temperature_setpoint))
         history = []
         while True:
