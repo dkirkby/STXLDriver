@@ -39,8 +39,8 @@ def main():
         help='camera interface URL to use')
     parser.add_argument('-b', '--binning', type=int, choices=(1, 2, 3), default=1,
         help='camera pixel binning to use (1,2 or 3)')
-    parser.add_argument('-T', '--temperature', type=float, default=15.,
-        help='temperature setpoint to use in C')
+    parser.add_argument('-T', '--temperature', type=float, default=None,
+        help='temperature setpoint to use in C or no regulation if not set')
     parser.add_argument('--nzero', type=int, default=0, metavar='N',
         help='number of zero-length exposures to take')
     parser.add_argument('--ndark', type=int, default=0, metavar='N',
