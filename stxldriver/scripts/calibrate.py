@@ -90,7 +90,8 @@ def main():
     fname_format = zero_name.format(N='{N:03d}')
     while i < i0 + args.nzero:
         fname = os.path.join(outpath, fname_format.format(N=i))
-        if C.take_exposure(exptime=0., fname=fname, shutter_open=False, latchup_action=init):
+        #if C.take_exposure(exptime=0., fname=fname, shutter_open=False, latchup_action=init):
+        if C.take_exposure(exptime=0., fname=None, shutter_open=False, latchup_action=init):
             i += 1
 
     dark_name = os.path.join(outpath, args.dark_name)
