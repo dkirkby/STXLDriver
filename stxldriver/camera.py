@@ -203,6 +203,12 @@ class Camera(object):
             for chunk in response.iter_content(chunk_size=128):
                 fout.write(chunk)
 
+    def get_image(self):
+        path = '/Image.FIT'
+        response = self._get(path)
+        ff = fits.open(BytesIO(response.content))
+        return ff[0].data
+
     def abort_exposure(self):
         self._get('/exposure.html?Abort')
 
