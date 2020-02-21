@@ -206,8 +206,8 @@ class Camera(object):
     def get_image(self):
         path = '/Image.FIT'
         response = self._get(path)
-        ff = fits.open(BytesIO(response.content))
-        return ff[0].data
+        #ff = fits.open(BytesIO(response.content))
+        #return ff[0].data
 
     def abort_exposure(self):
         self._get('/exposure.html?Abort')
@@ -314,6 +314,8 @@ class Camera(object):
             The exposure time in seconds to use. Can be zero.
         fname : str
             The name of the FITS file where a successful exposure will be saved.
+            When None, use :meth:`get_image` to transfer the image data without
+            saving it.
         shutter_open : bool
             When True, the shutter will be open during the exposure.
         timeout : float
@@ -370,6 +372,10 @@ class Camera(object):
                 latchup_action()
                 return False
         # Read the data from the camera.
-        self.save_exposure(fname)
-        logging.debug('Saved {0}'.format(fname))
+        if fname is None:
+            self.get_image()
+            logging.debug('Transfered image data without saving.')
+        else:
+            self.save_exposure(fname)
+            logging.debug('Saved {0}'.format(fname))
         return True
