@@ -374,7 +374,7 @@ class Camera(object):
         # Read the data from the camera.
         if fname is None:
             self.get_image()
-            logging.debug('Transfered image data without saving.')
+            #logging.debug('Transfered image data without saving.')
         else:
             self.save_exposure(fname)
             logging.debug('Saved {0}'.format(fname))
